@@ -1,21 +1,22 @@
 import torch 
 import torch.nn as nn 
-from .dog import DoG
+from dog import DoG
+from feature_aggregator import FeatureMapAttention
 
 
 
-class SimpleCNN(nn.Module):
-    def __init__(self, num_pyramid_levels=3, num_classes=9):  # Updated num_classes
-        super(SimpleCNN, self).__init__()
+class DoGNet(nn.Module):
+    def __init__(self, num_pyramid_levels=3, num_classes=10):  # Updated num_classes
+        super(DoGNet, self).__init__()
         self.num_pyramid_levels = num_pyramid_levels
 
         # First custom convolutional layer
         self.convs = nn.ModuleList([
-            DoG(in_channels=3, out_channels=32, kernel_size=5, stride=1, padding=2)
+            DoG(in_channels=1, out_channels=32, kernel_size=5, stride=1, padding=2)
             for _ in range(num_pyramid_levels)
         ])
-
-        self.conv2 = nn.Conv2d(in_channels=32 * num_pyramid_levels, out_channels=32, kernel_size=3, stride=1, padding=1)
+        self.atten = FeatureMapAttention(num_pyramid_levels,32)
+        self.conv2 = nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, stride=1, padding=1)
         self.conv3 = nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, stride=1, padding=1)
 
         self.pool = nn.AdaptiveAvgPool2d((8, 8))
@@ -25,7 +26,7 @@ class SimpleCNN(nn.Module):
         self.dropout = nn.Dropout(0.5)
 
     def forward(self, x):
-        pyramid = generate_pyramid(x, self.num_pyramid_levels)
+        pyramid = self.generate_pyramid(x, self.num_pyramid_levels)
 
         pyramid_features = []
         for i, level in enumerate(pyramid):
@@ -42,7 +43,7 @@ class SimpleCNN(nn.Module):
 
             pyramid_features.append(features)
 
-        combined_features = torch.cat(pyramid_features, dim=1)
+        combined_features = self.atten(pyramid_features)
         
         x = self.conv2(combined_features)
         x = F.relu(x)
@@ -53,3 +54,9 @@ class SimpleCNN(nn.Module):
         x = self.fc1(x)
 
         return x
+    def generate_pyramid(self,image, num_levels):
+        pyramid = [image]
+        for i in range(1, num_levels):
+            downsampled_image = F.interpolate(pyramid[-1], scale_factor=0.5, mode='bilinear', align_corners=False)
+            pyramid.append(downsampled_image)
+        return pyramid
