@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn 
 from dog import DoG
 from feature_aggregator import FeatureMapAttention
+import torch.nn.functional as F
+
 
 
 
