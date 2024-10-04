@@ -42,6 +42,9 @@ class DoGNet(nn.Module):
                 )
 
             pyramid_features.append(features)
+            
+        pyramid_features = torch.stack(pyramid_features, dim=1)
+
 
         combined_features = self.atten(pyramid_features)
         
