@@ -63,6 +63,9 @@ class DoG(nn.Module):
         Returns:
             torch.Tensor: Output tensor after applying DoG convolution.
         """
+        if self.x_grid.device != x.device:
+          self.x_grid = self.x_grid.to(x.device)
+          self.y_grid = self.y_grid.to(x.device)
 
         # Ensure sigma2 > sigma1 to create a proper DoG
         sigma1 = torch.clamp(self.sigma1, min=1e-5)
