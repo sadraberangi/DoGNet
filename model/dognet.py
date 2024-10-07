@@ -6,7 +6,7 @@ import torch.nn.functional as F
 
 
 class DoGNet(nn.Module):
-    def __init__(self, num_classes=10, in_channels=3, num_pyramid_levels=3):  # Updated num_classes
+    def __init__(self, num_classes=10, in_channels=3, num_pyramid_levels=3, drop_out=0.5):  # Updated num_classes
         super(DoGNet, self).__init__()
         self.num_pyramid_levels = num_pyramid_levels
 
@@ -50,7 +50,8 @@ class DoGNet(nn.Module):
         self.fc2 = nn.Linear(1024, num_classes)  # Updated num_classes
 
         self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(0.5)
+
+        self.dropout = nn.Dropout(drop_out)
 
         self.softmax = nn.Softmax(dim=-1)
 
@@ -91,6 +92,7 @@ class DoGNet(nn.Module):
 
         x = self.global_avg_pool(x).view(-1, self.channels[-1])
         x = self.relu(self.fc1(x))
+        x = self.dropout(x)
         x = self.softmax(self.fc2(x))
 
         return x
@@ -110,9 +112,9 @@ if __name__ == "__main__":
     batch_size = 2
     in_channels = 3
     height, width = 64, 64
-    x = torch.randn(batch_size, in_channels, height, width)
+    x = torch.randn(batch_size, in_channels, height, width).to('cuda')
 
-    model = DoGNet(in_channels=in_channels)
+    model = DoGNet(in_channels=in_channels).to('cuda')
 
     # Forward pass
     output = model(x)
