@@ -93,7 +93,8 @@ class DoGNet(nn.Module):
         x = self.global_avg_pool(x).view(-1, self.channels[-1])
         x = self.relu(self.fc1(x))
         x = self.dropout(x)
-        # x = self.log_softmax(self.fc2(x))
+        
+        x = self.fc2(x)
 
         return x
 
