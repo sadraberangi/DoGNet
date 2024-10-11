@@ -12,7 +12,7 @@ class DoGNet(nn.Module):
 
         self.channels = [16, 32, 32, 64, 64, 128, 128]
 
-        # First custom convolutional layer
+        # First custom convolutional layer  
         self.dogs = nn.ModuleList([
             DoG(in_channels=in_channels, out_channels=self.channels[0],
                 kernel_size=5, stride=1, padding=2)
@@ -93,7 +93,7 @@ class DoGNet(nn.Module):
         x = self.global_avg_pool(x).view(-1, self.channels[-1])
         x = self.relu(self.fc1(x))
         x = self.dropout(x)
-        x = self.log_softmax(self.fc2(x))
+        # x = self.log_softmax(self.fc2(x))
 
         return x
 
