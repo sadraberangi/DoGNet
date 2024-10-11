@@ -93,12 +93,12 @@ class DoGNet(nn.Module):
         x = self.global_avg_pool(x).view(-1, self.channels[-1])
         x = self.relu(self.fc1(x))
         x = self.dropout(x)
-        x = self.log_slog_softmaxoftmax(self.fc2(x))
+        x = self.log_softmax(self.fc2(x))
 
         return x
 
     def generate_pyramid(self, image, num_levels):
-        pyramid = [image]
+        pyramid = [image]   
         for i in range(1, num_levels):
             downsampled_image = F.interpolate(
                 pyramid[-1], scale_factor=0.5, mode='bilinear', align_corners=False)
