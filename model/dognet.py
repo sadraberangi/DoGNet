@@ -10,7 +10,7 @@ class DoGNet(nn.Module):
         super(DoGNet, self).__init__()
         self.num_pyramid_levels = num_pyramid_levels
 
-        self.channels = [16, 32, 32, 64, 64, 128, 128]
+        self.channels = [16, 32, 32, 64, 64, 128, 128, 256, 256]
 
         # First custom convolutional layer  
         self.dogs = nn.ModuleList([
@@ -39,19 +39,20 @@ class DoGNet(nn.Module):
 
         self.conv7 = nn.Conv2d(
             in_channels=self.channels[5], out_channels=self.channels[6], kernel_size=3, stride=1, padding=1)
+        self.conv8 = nn.Conv2d(
+            in_channels=self.channels[6], out_channels=self.channels[7], kernel_size=5, stride=1, padding=2)
+        self.conv9 = nn.Conv2d(
+            in_channels=self.channels[7], out_channels=self.channels[8], kernel_size=3, stride=1, padding=1)
 
-        self.bn3 = nn.BatchNorm2d(self.channels[6])
+        self.bn3 = nn.BatchNorm2d(self.channels[8])
 
-        self.max_pooling2d = nn.MaxPool2d(kernel_size=2, stride=2)
         self.global_avg_pool = nn.AdaptiveAvgPool2d((1, 1))
 
-        self.fc1 = nn.Linear(self.channels[6], 1024)  # Updated num_classes
-        self.fc2 = nn.Linear(1024, num_classes)  # Updated num_classes
+        self.fc1 = nn.Linear(self.channels[8], num_classes)  # Updated num_classes
 
+        self.max_pooling2d = nn.MaxPool2d(kernel_size=2, stride=2)
         self.relu = nn.ReLU()
-
         self.dropout = nn.Dropout(drop_out)
-
         self.log_softmax = nn.LogSoftmax(dim=-1)
 
     def forward(self, x):
@@ -88,13 +89,12 @@ class DoGNet(nn.Module):
 
         x = self.max_pooling2d(x)
 
-        x = self.relu(self.bn3(self.conv7(x)))
+        x = self.relu(self.conv7(x))
+        x = self.relu(self.conv8(x))
+        x = self.relu(self.bn3(self.conv9(x)))
 
         x = self.global_avg_pool(x).view(-1, self.channels[-1])
-        x = self.relu(self.fc1(x))
-        x = self.dropout(x)
-        
-        x = self.fc2(x)
+        x = self.fc1(x)
 
         return x
 
@@ -113,9 +113,9 @@ if __name__ == "__main__":
     batch_size = 2
     in_channels = 3
     height, width = 64, 64
-    x = torch.randn(batch_size, in_channels, height, width).to('cuda')
+    x = torch.randn(batch_size, in_channels, height, width).to('cpu')
 
-    model = DoGNet(in_channels=in_channels).to('cuda')
+    model = DoGNet(in_channels=in_channels).to('cpu')
 
     # Forward pass
     output = model(x)
