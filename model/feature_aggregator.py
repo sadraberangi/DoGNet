@@ -69,7 +69,7 @@ class FeatureMapAttention(nn.Module):
         # Optionally, project back to C dimensions
         attention_output = self.out_proj(attention_output)  # (B, n, C)
 
-
+    
         # Reshape weights for broadcasting: (B, n, 1, 1, 1)
         attention_output = attention_output.view(B, n, C, 1, 1)
 

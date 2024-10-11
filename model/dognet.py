@@ -53,49 +53,49 @@ class DoGNet(nn.Module):
 
         self.dropout = nn.Dropout(drop_out)
 
-        self.softmax = nn.Softmax(dim=-1)
+        self.log_softmax = nn.LogSoftmax(dim=-1)
 
-    def forward(self, x):
-        pyramid = self.generate_pyramid(x, self.num_pyramid_levels)
+        def forward(self, x):
+            pyramid = self.generate_pyramid(x, self.num_pyramid_levels)
 
-        pyramid_features = []
-        for i, level in enumerate(pyramid):
-            features = self.dogs[i](level)
-            features = F.relu(features)
+            pyramid_features = []
+            for i, level in enumerate(pyramid):
+                features = self.dogs[i](level)
+                features = F.relu(features)
+    
+                if i > 0:
+                    features = F.interpolate(
+                        features,
+                        size=pyramid[0].shape[2:],
+                        mode='bilinear',
+                        align_corners=False
+                    )
 
-            if i > 0:
-                features = F.interpolate(
-                    features,
-                    size=pyramid[0].shape[2:],
-                    mode='bilinear',
-                    align_corners=False
-                )
+                pyramid_features.append(features)
 
-            pyramid_features.append(features)
+            pyramid_features = torch.stack(pyramid_features, dim=1)
 
-        pyramid_features = torch.stack(pyramid_features, dim=1)
+            combined_features = self.atten(pyramid_features)
 
-        combined_features = self.atten(pyramid_features)
+            x = self.relu(self.conv2(combined_features))
+            x = self.relu(self.bn1(self.conv3(x)))
+            
+            x = self.max_pooling2d(x)
 
-        x = self.relu(self.conv2(combined_features))
-        x = self.relu(self.bn1(self.conv3(x)))
-        
-        x = self.max_pooling2d(x)
+            x = self.relu(self.conv4(x))
+            x = self.relu(self.conv5(x))
+            x = self.relu(self.bn2(self.conv6(x)))
+            
+            x = self.max_pooling2d(x)       
 
-        x = self.relu(self.conv4(x))
-        x = self.relu(self.conv5(x))
-        x = self.relu(self.bn2(self.conv6(x)))
-        
-        x = self.max_pooling2d(x)       
+            x = self.relu(self.bn3(self.conv7(x)))
 
-        x = self.relu(self.bn3(self.conv7(x)))
+            x = self.global_avg_pool(x).view(-1, self.channels[-1])
+            x = self.relu(self.fc1(x))
+            x = self.dropout(x)
+            x = self.log_softmax(self.fc2(x))
 
-        x = self.global_avg_pool(x).view(-1, self.channels[-1])
-        x = self.relu(self.fc1(x))
-        x = self.dropout(x)
-        x = self.softmax(self.fc2(x))
-
-        return x
+            return x
 
     def generate_pyramid(self, image, num_levels):
         pyramid = [image]
