@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from dog import DoG
+from unfis import UNFIS
 from feature_aggregator import FeatureMapAttention
 import torch.nn.functional as F
 
@@ -50,6 +51,8 @@ class DoGNet(nn.Module):
 
         self.fc1 = nn.Linear(self.channels[8], num_classes)  # Updated num_classes
 
+        self.unfis = UNFIS(self.channels[8], 5, num_classes) #unfis instead of fc1
+
         self.max_pooling2d = nn.MaxPool2d(kernel_size=2, stride=2)
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(drop_out)
@@ -94,7 +97,8 @@ class DoGNet(nn.Module):
         x = self.relu(self.bn3(self.conv9(x)))
 
         x = self.global_avg_pool(x).view(-1, self.channels[-1])
-        x = self.fc1(x)
+        # x = self.fc1(x)
+        x = self.unfis(x) # instead of fc1
 
         return x
 
