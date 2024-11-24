@@ -45,14 +45,8 @@ class UNFIS(nn.Module):
         zeta = torch.sigmoid(self.s)
         y = (y + epsilon) / ((1 - zeta) * y + zeta + epsilon)
 
-        y = torch.log(y + epsilon)
+        y = torch.min(y, dim=1).values
 
-        max_log_y= torch.max(y, dim=1, keepdim=True)[0]
-
-        y = torch.sum(y - max_log_y, dim=1)  # Subtract max for numerical stability
-
-        y = torch.exp(y) * torch.exp(max_log_y.squeeze(dim=1))
-        
         return y
     
 
