@@ -51,7 +51,7 @@ class DoGNet(nn.Module):
 
         self.fc1 = nn.Linear(self.channels[8], num_classes)  # Updated num_classes
 
-        self.unfis = UNFIS(self.channels[8], 4, num_classes) #unfis instead of fc1
+        self.unfis = UNFIS(self.channels[8], 3, num_classes) #unfis instead of fc1
 
         self.max_pooling2d = nn.MaxPool2d(kernel_size=2, stride=2)
         self.relu = nn.ReLU()
