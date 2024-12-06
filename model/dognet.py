@@ -4,6 +4,7 @@ from dog import DoG
 from unfis import UNFIS
 from feature_aggregator import FeatureMapAttention
 import torch.nn.functional as F
+from torchinfo import summary
 
 
 class DoGNet(nn.Module):
@@ -20,14 +21,18 @@ class DoGNet(nn.Module):
             for _ in range(num_pyramid_levels)
         ])
 
-        self.atten = FeatureMapAttention(num_pyramid_levels, self.channels[0])
 
+        self.conv1 = nn.Conv2d(
+            in_channels=self.channels[0], out_channels=self.channels[0], kernel_size=3, stride=1, padding=1)
         self.conv2 = nn.Conv2d(
-            in_channels=self.channels[0], out_channels=self.channels[1], kernel_size=3, stride=1, padding=1)
+            in_channels=self.channels[0], out_channels=self.channels[1], kernel_size=5, stride=1, padding=2)
         self.conv3 = nn.Conv2d(
             in_channels=self.channels[1], out_channels=self.channels[2], kernel_size=3, stride=1, padding=1)
 
         self.bn1 = nn.BatchNorm2d(self.channels[2])
+        self.align_conv1 = nn.Conv2d(
+            in_channels=self.channels[0], out_channels=self.channels[2], kernel_size=3, stride=1, padding=1)
+        self.atten1 = FeatureMapAttention(2, self.channels[2])
 
         self.conv4 = nn.Conv2d(
             in_channels=self.channels[2], out_channels=self.channels[3], kernel_size=3, stride=1, padding=1)
@@ -37,6 +42,10 @@ class DoGNet(nn.Module):
             in_channels=self.channels[4], out_channels=self.channels[5], kernel_size=3, stride=1, padding=1)
 
         self.bn2 = nn.BatchNorm2d(self.channels[5])
+        self.align_conv2 = nn.Conv2d(
+            in_channels=self.channels[0], out_channels=self.channels[5], kernel_size=3, stride=1, padding=1)
+        self.atten2 = FeatureMapAttention(2, self.channels[5])
+
 
         self.conv7 = nn.Conv2d(
             in_channels=self.channels[5], out_channels=self.channels[6], kernel_size=3, stride=1, padding=1)
@@ -62,35 +71,43 @@ class DoGNet(nn.Module):
         
         pyramid = self.generate_pyramid(x, self.num_pyramid_levels)
 
-        pyramid_features = []
-        for i, level in enumerate(pyramid):
-            features = self.dogs[i](level)
-            features = F.relu(features)
+        # pyramid_features = []
+        # for i, level in enumerate(pyramid):
+        #     features = self.dogs[i](level)
+        #     features = F.relu(features)
 
-            if i > 0:
-                features = F.interpolate(
-                    features,
-                    size=pyramid[0].shape[2:],
-                    mode='bilinear',
-                    align_corners=False
-                )
+        #     if i > 0:
+        #         features = F.interpolate(
+        #             features,
+        #             size=pyramid[0].shape[2:],
+        #             mode='bilinear',
+        #             align_corners=False
+        #         )
 
-            pyramid_features.append(features)
+        #     pyramid_features.append(features)
 
-        pyramid_features = torch.stack(pyramid_features, dim=1)
+        # pyramid_features = torch.stack(pyramid_features, dim=1)
 
-        combined_features = self.atten(pyramid_features)
+        # combined_features = self.atten(pyramid_features)
 
-        x = self.relu(self.conv2(combined_features))
+        x = self.dogs[0](x)
+        x = self.relu(self.conv1(x))
+        x = self.relu(self.conv2(x))
         x = self.relu(self.bn1(self.conv3(x)))
 
         x = self.max_pooling2d(x)
+        res = self.dogs[1](pyramid[1])
+        res = self.relu(self.align_conv1(res))
+        x = self.atten1([x, res])
 
         x = self.relu(self.conv4(x))
         x = self.relu(self.conv5(x))
         x = self.relu(self.bn2(self.conv6(x)))
 
         x = self.max_pooling2d(x)
+        res = self.dogs[2](pyramid[2])
+        res = self.relu(self.align_conv2(res))
+        x = self.atten2([x, res])
 
         x = self.relu(self.conv7(x))
         x = self.relu(self.conv8(x))
@@ -124,3 +141,5 @@ if __name__ == "__main__":
     # Forward pass
     output = model(x)
     print(f"Output shape: {output.shape}")  # Expected: (2, 16, 64, 64)
+
+    summary(model, x.shape)
