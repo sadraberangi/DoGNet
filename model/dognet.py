@@ -114,8 +114,8 @@ class DoGNet(nn.Module):
         x = self.relu(self.bn3(self.conv9(x)))
 
         x = self.global_avg_pool(x).view(-1, self.channels[-1])
-        # x = self.fc1(x)
-        x = self.unfis(x) # instead of fc1
+        x = self.fc1(x)
+        # x = self.unfis(x) # instead of fc1
 
         return x
 
